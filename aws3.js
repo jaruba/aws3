@@ -13,6 +13,8 @@ function RequestSigner(request, credentials) {
 
   var headers = request.headers || {},
       hostParts = this.matchHost(request.hostname || request.host || headers.Host)
+	  
+	 console.log(hostParts)
 
   this.request = request
   this.credentials = credentials || this.defaultCredentials()
@@ -22,7 +24,7 @@ function RequestSigner(request, credentials) {
 }
 
 RequestSigner.prototype.matchHost = function(host) {
-  var match = (host || '').match(/^([^\.]+)\.?([^\.]*)\.amazonaws\.com$/)
+  var match = (host || '').match(/^([^\.]+)\.?([^\.]*)\.imdbws\.com$/)
   return (match || []).slice(1, 3)
 }
 
@@ -37,8 +39,13 @@ RequestSigner.prototype.createHost = function() {
 }
 
 RequestSigner.prototype.sign = function() {
-  var request = this.request,
-      headers = request.headers = (request.headers || {}),
+  var request = this.request
+	  
+  if (!this.request.host) this.request.host = require('url').parse(this.request.url).host	 
+
+  if (!this.request.method) this.request.method = 'GET'
+
+  var headers = request.headers = (request.headers || {}),
       date = new Date(headers.Date || new Date)
 
   if (!request.method && request.body)
@@ -84,18 +91,20 @@ RequestSigner.prototype.authHeader = function() {
 
 RequestSigner.prototype.signature = function() {
   return crypto.createHmac('sha256', this.credentials.secretAccessKey)
-    .update(this.stringToSign()).digest('base64')
+    .update(this.stringToSign()).digest('base64').trim()
 }
 
 RequestSigner.prototype.stringToSign = function() {
   if (this.service === 'route53') return this.request.headers['X-Amz-Date']
   var parts = [
     this.request.method,
-    '/',
-    '',
-    this.canonicalHeaders() + '\n',
+    require('url').parse(this.request.url).pathname,
+	(this.request.url.includes('?') ? this.request.url.split('?')[1] : ''),
+    this.canonicalHeaders(),
+	'',
     this.request.body || ''
   ].join('\n')
+
   return crypto.createHash('sha256').update(parts, 'utf8').digest()
 }
 
@@ -109,7 +118,7 @@ RequestSigner.prototype.canonicalHeaders = function() {
 
 RequestSigner.prototype.signedHeaders = function() {
   return this.headersToSign()
-    .map(function(key) { return key.toLowerCase() })
+//    .map(function(key) { return key.toLowerCase() })
     .sort()
     .join(';')
 }
