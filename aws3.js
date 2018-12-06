@@ -13,8 +13,6 @@ function RequestSigner(request, credentials) {
 
   var headers = request.headers || {},
       hostParts = this.matchHost(request.hostname || request.host || headers.Host)
-	  
-	 console.log(hostParts)
 
   this.request = request
   this.credentials = credentials || this.defaultCredentials()
